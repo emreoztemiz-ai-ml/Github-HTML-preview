@@ -378,10 +378,36 @@
                 flex-direction: column;
             }
             
-            .iframe-container {
-                height: 400px;
-            }
-        }
+
+        .iframe-container {
+    width: 100%;
+    height: 600px;
+    border: none;
+    position: relative;
+}
+
+.iframe-container:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    background-color: white;
+    z-index: 9999;
+}
+
+.iframe-container:fullscreen iframe {
+    width: 100%;
+    height: 100%;
+}
+
+body.dark-theme .iframe-container:fullscreen {
+    background-color: #0d1117;
+}
+
+:-webkit-full-screen .iframe-container,
+:-moz-full-screen .iframe-container,
+:-ms-fullscreen .iframe-container {
+    width: 100vw;
+    height: 100vh;
+}
     </style>
 </head>
 <body>
@@ -490,295 +516,202 @@
             <p><strong>Not:</strong> Bu araç yalnızca public GitHub repolarındaki HTML dosyalarını görüntüleyebilir. Özel repolar için yetkilendirme gereklidir.</p>
         </div>
     </main>
-    
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // DOM Elements
-            const githubUrlInput = document.getElementById('githubUrl');
-            const viewButton = document.getElementById('viewButton');
-            const clearButton = document.getElementById('clearButton');
-            const resultContainer = document.getElementById('resultContainer');
-            const previewFrame = document.getElementById('previewFrame');
-            const responsiveFrame = document.getElementById('responsiveFrame');
-            const sourceCode = document.getElementById('sourceCode');
-            const resultTitle = document.getElementById('resultTitle');
-            const originalLink = document.getElementById('originalLink');
-            const copyUrlButton = document.getElementById('copyUrlButton');
-            const copyRawButton = document.getElementById('copyRawButton');
-            const refreshButton = document.getElementById('refreshButton');
-            const errorMessage = document.getElementById('errorMessage');
-            const loading = document.getElementById('loading');
-            const themeToggle = document.getElementById('themeToggle');
-            const exampleUrls = document.querySelectorAll('.example-url');
-            const tabButtons = document.querySelectorAll('.tab-button');
-            const tabContents = document.querySelectorAll('.tab-content');
-            const deviceButtons = document.querySelectorAll('.device-button');
-            
-            // Theme switching
-            themeToggle.addEventListener('click', function() {
-                document.body.classList.toggle('dark-theme');
-                localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
-            });
-            
-            // Load saved theme
-            if (localStorage.getItem('theme') === 'dark') {
-                document.body.classList.add('dark-theme');
-            }
-            
-            // Example URLs
-            exampleUrls.forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    githubUrlInput.value = `https://github.com/${this.textContent}`;
-                });
-            });
-            
-            // Tab switching
-            tabButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const tabName = this.getAttribute('data-tab');
-                    
-                    tabButtons.forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-                    
-                    tabContents.forEach(content => {
-                        content.classList.remove('active');
-                    });
-                    
-                    this.classList.add('active');
-                    document.getElementById(`${tabName}Tab`).classList.add('active');
-                    
-                    if (tabName === 'responsive' && responsiveFrame.src !== previewFrame.src) {
-                        responsiveFrame.src = previewFrame.src;
-                    }
-                });
-            });
-            
-            // Responsive device selection
-            deviceButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const id = this.id;
-                    let width;
-                    
-                    switch(id) {
-                        case 'mobile':
-                            width = '375px';
-                            break;
-                        case 'tablet':
-                            width = '768px';
-                            break;
-                        case 'desktop':
-                            width = '1024px';
-                            break;
-                        case 'wide':
-                            width = '1440px';
-                            break;
-                        default:
-                            width = '1024px';
-                    }
-                    
-                    responsiveFrame.style.width = width;
-                });
-            });
-            
-            // Convert GitHub URL to raw URL
-            function convertToRawUrl(url) {
-                try {
-                    // Extract relevant parts of the URL
-                    const githubRegex = /https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)/;
-                    const match = url.match(githubRegex);
-                    
-                    if (!match) {
-                        throw new Error("Geçersiz GitHub URL formatı. Lütfen bir GitHub blob URL'si girin.");
-                    }
-                    
-                    const [, owner, repo, branch, path] = match;
-                    return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
-                } catch (error) {
-                    throw error;
-                }
-            }
-            
-            // Display error message
-            function showError(message) {
-                errorMessage.textContent = message;
-                errorMessage.style.display = 'block';
-                setTimeout(() => {
-                    errorMessage.style.display = 'none';
-                }, 5000);
-            }
-            
-            // Show loading state
-            function showLoading() {
-                resultContainer.style.display = 'block';
-                loading.style.display = 'flex';
-                document.getElementById('previewTab').style.display = 'none';
-                document.getElementById('sourceTab').style.display = 'none';
-                document.getElementById('responsiveTab').style.display = 'none';
-                document.querySelectorAll('.tab-button').forEach(btn => btn.style.display = 'none');
-            }
-            
-            // Hide loading state
-            function hideLoading() {
-                loading.style.display = 'none';
-                document.getElementById('previewTab').style.display = 'block';
-                document.querySelectorAll('.tab-button').forEach(btn => btn.style.display = 'block');
-            }
-            
-            // Fetch and display HTML content
-          async function fetchAndDisplayHTML(url) {
-    try {
-        showLoading();
+document.addEventListener('DOMContentLoaded', function() {
+    const githubUrlInput = document.getElementById('githubUrl');
+    const viewButton = document.getElementById('viewButton');
+    const clearButton = document.getElementById('clearButton');
+    const resultContainer = document.getElementById('resultContainer');
+    const previewFrame = document.getElementById('previewFrame');
+    const responsiveFrame = document.getElementById('responsiveFrame');
+    const sourceCode = document.getElementById('sourceCode');
+    const resultTitle = document.getElementById('resultTitle');
+    const originalLink = document.getElementById('originalLink');
+    const copyUrlButton = document.getElementById('copyUrlButton');
+    const copyRawButton = document.getElementById('copyRawButton');
+    const refreshButton = document.getElementById('refreshButton');
+    const errorMessage = document.getElementById('errorMessage');
+    const loading = document.getElementById('loading');
+    const themeToggle = document.getElementById('themeToggle');
+    const exampleUrls = document.querySelectorAll('.example-url');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const deviceButtons = document.querySelectorAll('.device-button');
+    const fullScreenButton = document.getElementById('fullScreenButton');
 
-        const rawUrl = convertToRawUrl(url);
-        const response = await fetch(rawUrl);
+    // Tema
+    themeToggle.addEventListener('click', function() {
+        document.body.classList.toggle('dark-theme');
+        localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+    });
 
-        if (!response.ok) {
-            throw new Error(`Dosya alınamadı: ${response.status} ${response.statusText}`);
-        }
-
-        const htmlContent = await response.text();
-
-        // Base URL'i oluştur
-        const baseUrlParts = rawUrl.split('/');
-        baseUrlParts.pop(); // Dosya adını kaldır
-        const baseUrl = baseUrlParts.join('/') + '/';
-
-        // <base> etiketini HTML'e ekle
-        const modifiedHtmlContent = htmlContent.replace('<head>', `<head><base href="${baseUrl}">`);
-
-        // Update title and links
-        const pathParts = url.split('/');
-        const fileName = pathParts[pathParts.length - 1];
-        resultTitle.textContent = fileName;
-        originalLink.href = url;
-
-        // Set the HTML content in the iframe
-        const iframe = previewFrame;
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write(modifiedHtmlContent); // Burada modifiedHtmlContent kullanılıyor
-        iframeDoc.close();
-
-        // Set the source code
-        sourceCode.textContent = htmlContent;
-
-        // Store the raw URL
-        previewFrame.setAttribute('data-raw-url', rawUrl);
-
-        // Reset the active tab
-        tabButtons.forEach(btn => {
-            btn.classList.remove('active');
-        });
-        tabContents.forEach(content => {
-            content.classList.remove('active');
-        });
-        document.querySelector('[data-tab="preview"]').classList.add('active');
-        document.getElementById('previewTab').classList.add('active');
-
-        hideLoading();
-    } catch (error) {
-        hideLoading();
-        showError(error.message);
+    if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark-theme');
     }
-}
-            
-            // View button click handler
-            viewButton.addEventListener('click', function() {
-                const url = githubUrlInput.value.trim();
-                
-                if (!url) {
-                    showError("Lütfen bir GitHub HTML dosya URL'si girin.");
-                    return;
-                }
-                
-                try {
-                    // Validate URL format
-                    if (!url.includes('github.com') || !url.includes('/blob/')) {
-                        throw new Error("Geçersiz GitHub URL formatı. Lütfen bir GitHub blob URL'si girin.");
-                    }
-                    
-                    fetchAndDisplayHTML(url);
-                } catch (error) {
-                    showError(error.message);
-                }
-            });
-            
-            // Clear button click handler
-            clearButton.addEventListener('click', function() {
-                githubUrlInput.value = '';
-                resultContainer.style.display = 'none';
-            });
-            
-            // Copy URL button click handler
-            copyUrlButton.addEventListener('click', function() {
-                navigator.clipboard.writeText(githubUrlInput.value).then(() => {
-                    this.textContent = "Kopyalandı!";
-                    setTimeout(() => {
-                        this.textContent = "URL Kopyala";
-                    }, 2000);
-                });
-            });
-             // Full Ekran görüntüleme
-            const fullScreenButton = document.getElementById('fullScreenButton');
 
-fullScreenButton.addEventListener('click', function() {
-    const iframe = document.getElementById('previewFrame');
-    if (iframe && iframe.contentWindow) {
-        const iframeDoc = iframe.contentWindow.document.documentElement.outerHTML;
-        const newWindow = window.open('', '_blank', 'noopener, noreferrer, width=screen,height=screen');
-        if (newWindow) {
-            newWindow.document.open();
-            newWindow.document.write(iframeDoc);
-            newWindow.document.close();
-        } else {
-            showError('Pop-up engellendi. Lütfen tarayıcı ayarlarınızı kontrol edin.');
+    // Örnek URL tıklama
+    exampleUrls.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            githubUrlInput.value = `https://github.com/${this.textContent}`;
+        });
+    });
+
+    // Sekmeler
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tabName = this.getAttribute('data-tab');
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            this.classList.add('active');
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+
+            if (tabName === 'responsive') {
+                responsiveFrame.src = previewFrame.src;
+            }
+        });
+    });
+
+    // Cihaz düğmeleri
+    deviceButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.id;
+            let width;
+            switch(id) {
+                case 'mobile': width = '375px'; break;
+                case 'tablet': width = '768px'; break;
+                case 'desktop': width = '1024px'; break;
+                case 'wide': width = '1440px'; break;
+                default: width = '1024px';
+            }
+            responsiveFrame.style.width = width;
+        });
+    });
+
+    function convertToRawUrl(url) {
+        const match = url.match(/https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)/);
+        if (!match) throw new Error("Geçersiz GitHub URL formatı.");
+        const [, owner, repo, branch, path] = match;
+        return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+    }
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        setTimeout(() => errorMessage.style.display = 'none', 5000);
+    }
+
+    function showLoading() {
+        resultContainer.style.display = 'block';
+        loading.style.display = 'flex';
+        document.getElementById('previewTab').style.display = 'none';
+        document.getElementById('sourceTab').style.display = 'none';
+        document.getElementById('responsiveTab').style.display = 'none';
+        document.querySelectorAll('.tab-button').forEach(btn => btn.style.display = 'none');
+    }
+
+    function hideLoading() {
+        loading.style.display = 'none';
+        document.getElementById('previewTab').style.display = 'block';
+        document.querySelectorAll('.tab-button').forEach(btn => btn.style.display = 'inline-block');
+    }
+
+    async function fetchAndDisplayHTML(url) {
+        try {
+            showLoading();
+            const rawUrl = convertToRawUrl(url);
+            const response = await fetch(rawUrl);
+            if (!response.ok) throw new Error(`Dosya alınamadı: ${response.status} ${response.statusText}`);
+            const htmlContent = await response.text();
+            const baseUrl = rawUrl.substring(0, rawUrl.lastIndexOf('/') + 1);
+            const modifiedHtml = htmlContent.replace('<head>', `<head><base href="${baseUrl}">`);
+
+            const fileName = url.split('/').pop();
+            resultTitle.textContent = fileName;
+            originalLink.href = url;
+
+            const iframeDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(modifiedHtml);
+            iframeDoc.close();
+
+            previewFrame.setAttribute('data-raw-url', rawUrl);
+            sourceCode.textContent = htmlContent;
+
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            document.querySelector('[data-tab="preview"]').classList.add('active');
+            document.getElementById('previewTab').classList.add('active');
+
+            hideLoading();
+        } catch (err) {
+            hideLoading();
+            showError(err.message);
         }
-    } else {
-        showError('Önizleme alanı bulunamadı.');
+    }
+
+    viewButton.addEventListener('click', () => {
+        const url = githubUrlInput.value.trim();
+        if (!url) return showError("Lütfen bir GitHub HTML dosya URL'si girin.");
+        if (!url.includes('github.com') || !url.includes('/blob/')) {
+            return showError("Geçersiz GitHub URL formatı.");
+        }
+        fetchAndDisplayHTML(url);
+    });
+
+    clearButton.addEventListener('click', () => {
+        githubUrlInput.value = '';
+        resultContainer.style.display = 'none';
+    });
+
+    copyUrlButton.addEventListener('click', function() {
+        navigator.clipboard.writeText(githubUrlInput.value).then(() => {
+            this.textContent = "Kopyalandı!";
+            setTimeout(() => this.textContent = "URL Kopyala", 2000);
+        });
+    });
+
+    copyRawButton.addEventListener('click', function() {
+        try {
+            const rawUrl = previewFrame.getAttribute('data-raw-url');
+            if (!rawUrl) throw new Error("Önce bir dosya görüntüleyin.");
+            navigator.clipboard.writeText(rawUrl).then(() => {
+                this.textContent = "Kopyalandı!";
+                setTimeout(() => this.textContent = "Raw URL Kopyala", 2000);
+            });
+        } catch (err) {
+            showError(err.message);
+        }
+    });
+
+    refreshButton.addEventListener('click', () => {
+        const url = githubUrlInput.value.trim();
+        if (url) fetchAndDisplayHTML(url);
+    });
+
+    githubUrlInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') viewButton.click();
+    });
+
+    // Tam ekran
+    fullScreenButton.addEventListener('click', function() {
+        const iframeContainer = previewFrame.closest('.iframe-container');
+        if (!iframeContainer) return showError("Önizleme alanı bulunamadı.");
+
+        if (!document.fullscreenElement) {
+            iframeContainer.requestFullscreen().catch(() => {
+                showError("Tam ekran modu desteklenmiyor veya reddedildi.");
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    });
+
+    // Başlangıç URL
+    if (!githubUrlInput.value.trim()) {
+        githubUrlInput.value = 'https://github.com/emreoztemiz-ai-ml/Running-contexts-without-needing-a-Mobile-App/blob/main/index.html';
     }
 });
-
-            // Copy Raw URL button click handler
-            copyRawButton.addEventListener('click', function() {
-                try {
-                     const rawUrl = previewFrame.getAttribute('data-raw-url');
-                    if (!rawUrl) {
-                        throw new Error("Önce bir dosya görüntüleyin.");
-                    }
-                    
-                    navigator.clipboard.writeText(rawUrl).then(() => {
-                        this.textContent = "Kopyalandı!";
-                        setTimeout(() => {
-                            this.textContent = "Raw URL Kopyala";
-                        }, 2000);
-                    });
-                } catch (error) {
-                    showError(error.message);
-                }
-            });
-            
-            // Refresh button click handler
-            refreshButton.addEventListener('click', function() {
-                const url = githubUrlInput.value.trim();
-                if (url) {
-                    fetchAndDisplayHTML(url);
-                }
-            });
-            
-            // Handle Enter key in input field
-            githubUrlInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    viewButton.click();
-                }
-            });
-            
-            // Initialize with example URL if empty
-            if (!githubUrlInput.value.trim()) {
-                githubUrlInput.value = 'https://github.com/emreoztemiz-ai-ml/Running-contexts-without-needing-a-Mobile-App/blob/main/index.html';
-            }
-        });
-    </script>
+</script>
 </body>
 </html>
