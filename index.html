@@ -573,20 +573,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Cihaz düğmeleri
+   window.addEventListener('DOMContentLoaded', function () {
+    const deviceButtons = document.querySelectorAll('.device-button');
+    const responsiveFrame = document.getElementById('responsiveFrame');
+
     deviceButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const id = this.id;
-            let width;
-            switch(id) {
-                case 'mobile': width = '375px'; break;
-                case 'tablet': width = '768px'; break;
-                case 'desktop': width = '1024px'; break;
-                case 'wide': width = '1440px'; break;
-                default: width = '1024px';
-            }
-            responsiveFrame.style.width = width;
-        });
+      button.addEventListener('click', function () {
+        const id = this.id;
+        let width;
+        switch (id) {
+          case 'mobile': width = '375px'; break;
+          case 'tablet': width = '768px'; break;
+          case 'desktop': width = '1024px'; break;
+          case 'wide': width = '1440px'; break;
+          default: width = '1024px';
+        }
+        responsiveFrame.style.width = width;
+      });
     });
+  });
 
     function convertToRawUrl(url) {
         const match = url.match(/https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)/);
@@ -712,6 +717,27 @@ document.addEventListener('DOMContentLoaded', function() {
         githubUrlInput.value = 'https://github.com/emreoztemiz-ai-ml/Running-contexts-without-needing-a-Mobile-App/blob/main/index.html';
     }
 });
+     // Cihazlar için
+    document.querySelectorAll('.device-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const frame = document.getElementById('responsiveFrame');
+            switch (button.id) {
+                case 'mobile':
+                    frame.style.width = '375px';
+                    break;
+                case 'tablet':
+                    frame.style.width = '768px';
+                    break;
+                case 'desktop':
+                    frame.style.width = '1024px';
+                    break;
+                case 'wide':
+                    frame.style.width = '1440px';
+                    break;
+            }
+        });
+    });
+
 </script>
 </body>
 </html>
