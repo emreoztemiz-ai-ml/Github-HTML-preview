@@ -627,54 +627,62 @@
             }
             
             // Fetch and display HTML content
-            async function fetchAndDisplayHTML(url) {
-                try {
-                    showLoading();
-                    
-                    const rawUrl = convertToRawUrl(url);
-                    const response = await fetch(rawUrl);
-                    
-                    if (!response.ok) {
-                        throw new Error(`Dosya alınamadı: ${response.status} ${response.statusText}`);
-                    }
-                    
-                    const htmlContent = await response.text();
-                    
-                    // Update title and links
-                    const pathParts = url.split('/');
-                    const fileName = pathParts[pathParts.length - 1];
-                    resultTitle.textContent = fileName;
-                    originalLink.href = url;
-                    
-                    // Set the HTML content in the iframe
-                    const iframe = previewFrame;
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    iframeDoc.open();
-                    iframeDoc.write(htmlContent);
-                    iframeDoc.close();
-                    
-                    // Set the source code
-                    sourceCode.textContent = htmlContent;
-                    
-                    // Store the raw URL
-                    previewFrame.setAttribute('data-raw-url', rawUrl);
-                    
-                    // Reset the active tab
-                    tabButtons.forEach(btn => {
-                        btn.classList.remove('active');
-                    });
-                    tabContents.forEach(content => {
-                        content.classList.remove('active');
-                    });
-                    document.querySelector('[data-tab="preview"]').classList.add('active');
-                    document.getElementById('previewTab').classList.add('active');
-                    
-                    hideLoading();
-                } catch (error) {
-                    hideLoading();
-                    showError(error.message);
-                }
-            }
+          async function fetchAndDisplayHTML(url) {
+    try {
+        showLoading();
+
+        const rawUrl = convertToRawUrl(url);
+        const response = await fetch(rawUrl);
+
+        if (!response.ok) {
+            throw new Error(`Dosya alınamadı: ${response.status} ${response.statusText}`);
+        }
+
+        const htmlContent = await response.text();
+
+        // Base URL'i oluştur
+        const baseUrlParts = rawUrl.split('/');
+        baseUrlParts.pop(); // Dosya adını kaldır
+        const baseUrl = baseUrlParts.join('/') + '/';
+
+        // <base> etiketini HTML'e ekle
+        const modifiedHtmlContent = htmlContent.replace('<head>', `<head><base href="${baseUrl}">`);
+
+        // Update title and links
+        const pathParts = url.split('/');
+        const fileName = pathParts[pathParts.length - 1];
+        resultTitle.textContent = fileName;
+        originalLink.href = url;
+
+        // Set the HTML content in the iframe
+        const iframe = previewFrame;
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(modifiedHtmlContent); // Burada modifiedHtmlContent kullanılıyor
+        iframeDoc.close();
+
+        // Set the source code
+        sourceCode.textContent = htmlContent;
+
+        // Store the raw URL
+        previewFrame.setAttribute('data-raw-url', rawUrl);
+
+        // Reset the active tab
+        tabButtons.forEach(btn => {
+            btn.classList.remove('active');
+        });
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        document.querySelector('[data-tab="preview"]').classList.add('active');
+        document.getElementById('previewTab').classList.add('active');
+
+        hideLoading();
+    } catch (error) {
+        hideLoading();
+        showError(error.message);
+    }
+}
             
             // View button click handler
             viewButton.addEventListener('click', function() {
