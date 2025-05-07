@@ -522,8 +522,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const viewButton = document.getElementById('viewButton');
     const clearButton = document.getElementById('clearButton');
     const resultContainer = document.getElementById('resultContainer');
-    const previewFrame = document.getElementById('previewFrame');
-    const responsiveFrame = document.getElementById('responsiveFrame');
     const sourceCode = document.getElementById('sourceCode');
     const resultTitle = document.getElementById('resultTitle');
     const originalLink = document.getElementById('originalLink');
@@ -534,9 +532,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const loading = document.getElementById('loading');
     const themeToggle = document.getElementById('themeToggle');
     const exampleUrls = document.querySelectorAll('.example-url');
-    const tabButtons = document.querySelectorAll('.tab-button');
-    const tabContents = document.querySelectorAll('.tab-content');
-    const deviceButtons = document.querySelectorAll('.device-button');
     const fullScreenButton = document.getElementById('fullScreenButton');
 
 
@@ -557,52 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Sekmeler
-tabButtons.forEach(button => {
-    button.addEventListener('click', function () {
-        const tabName = this.getAttribute('data-tab');
-
-        // Buton stilleri
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        this.classList.add('active');
-
-        // Sekme içerikleri
-        tabContents.forEach(content => {
-            if (content.id === `${tabName}Tab`) {
-                content.style.display = 'block';
-                content.classList.add('active');
-            } else {
-                content.style.display = 'none';
-                content.classList.remove('active');
-            }
-        });
-
-        // Responsive sekmesi yüklendiğinde iframe'i güncelle
-        if (tabName === 'responsive') {
-            responsiveFrame.src = previewFrame.src;
-        }
-    });
-});
- // Cihazlar
-    deviceButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const sizes = {
-                mobile: '375px',
-                tablet: '768px',
-                desktop: '1024px',
-                wide: '1440px'
-            };
-            responsiveFrame.style.width = sizes[this.id] || '1024px';
-        });
-    });
-    // Cihaz düğmeleri
-    deviceButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const sizes = { mobile: '375px', tablet: '768px', desktop: '1024px', wide: '1440px' };
-            responsiveFrame.style.width = sizes[this.id] || '1024px';
-        });
-    });
-
+  
     // URL çevirici
     function convertToRawUrl(url) {
         const match = url.match(/https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)/);
@@ -821,5 +771,53 @@ tabButtons.forEach(button => {
     }
 });
 </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+  // Element seçimleri
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabContents = document.querySelectorAll('.tab-content');
+  const deviceButtons = document.querySelectorAll('.device-button');
+  const responsiveFrame = document.getElementById('responsiveFrame');
+  const previewFrame = document.getElementById('previewFrame');
+
+  // Sekmeler
+  tabButtons.forEach(button => {
+    button.addEventListener('click', function () {
+      const tabName = this.dataset.tab;
+
+      // Buton stilleri
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      this.classList.add('active');
+
+      // İçerik gösterimi
+      tabContents.forEach(content => {
+        const isActive = content.id === `${tabName}Tab`;
+        content.style.display = isActive ? 'block' : 'none';
+        content.classList.toggle('active', isActive);
+      });
+
+      // Responsive sekmesi kontrolü
+      if (tabName === 'responsive' && previewFrame) {
+        responsiveFrame.src = previewFrame.src;
+      }
+    });
+  });
+
+  // Cihaz boyutları (tek event listener)
+  deviceButtons.forEach(button => {
+    button.addEventListener('click', function () {
+      const sizes = { 
+        mobile: '375px', 
+        tablet: '768px', 
+        desktop: '1024px', 
+        wide: '1440px' 
+      };
+      if (responsiveFrame) {
+        responsiveFrame.style.width = sizes[this.id] || '1024px';
+      }
+    });
+  });
+});
+        </script>
 </body>
 </html>
