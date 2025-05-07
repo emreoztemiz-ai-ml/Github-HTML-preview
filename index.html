@@ -649,13 +649,22 @@ document.addEventListener('DOMContentLoaded', function() {
             resultContainer.style.display = 'block';
 
         } catch (error) {
-            showError(error.message);
-        } finally {
-            hideLoading();
+            showError(`Hata: ${error.message}`);
+            console.error('Hata detayı:', error);
         }
     };
 
     // Yardımcı fonksiyonlar
+      const isValidGithubUrl = url => {
+        return /^https?:\/\/github\.com\/[^/]+\/[^/]+\/blob\/.+/.test(url);
+    };
+
+    const convertToRawUrl = url => {
+        return url
+            .replace('github.com', 'raw.githubusercontent.com')
+            .replace('/blob/', '/');
+    };
+
     const showLoading = () => {
         loading.style.display = 'flex';
         resultContainer.style.display = 'none';
