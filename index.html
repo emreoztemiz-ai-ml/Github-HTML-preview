@@ -558,19 +558,31 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Sekmeler
-    tabButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const tabName = this.getAttribute('data-tab');
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            this.classList.add('active');
-            document.getElementById(`${tabName}Tab`).classList.add('active');
+tabButtons.forEach(button => {
+    button.addEventListener('click', function () {
+        const tabName = this.getAttribute('data-tab');
 
-            if (tabName === 'responsive') {
-                responsiveFrame.src = previewFrame.src;
+        // Buton stilleri
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        this.classList.add('active');
+
+        // Sekme içerikleri
+        tabContents.forEach(content => {
+            if (content.id === `${tabName}Tab`) {
+                content.style.display = 'block';
+                content.classList.add('active');
+            } else {
+                content.style.display = 'none';
+                content.classList.remove('active');
             }
         });
+
+        // Responsive sekmesi yüklendiğinde iframe'i güncelle
+        if (tabName === 'responsive') {
+            responsiveFrame.src = previewFrame.src;
+        }
     });
+});
  // Cihazlar
     deviceButtons.forEach(button => {
         button.addEventListener('click', function () {
