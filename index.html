@@ -517,7 +517,9 @@ body.dark-theme .iframe-container:fullscreen {
         </div>
     </main>
 <script>
+    // DOM Content
 document.addEventListener('DOMContentLoaded', function() {
+    // Element seçimleri
     const githubUrlInput = document.getElementById('githubUrl');
     const viewButton = document.getElementById('viewButton');
     const clearButton = document.getElementById('clearButton');
@@ -533,7 +535,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const themeToggle = document.getElementById('themeToggle');
     const exampleUrls = document.querySelectorAll('.example-url');
     const fullScreenButton = document.getElementById('fullScreenButton');
-
+    const previewFrame = document.getElementById('previewFrame');
+    const responsiveFrame = document.getElementById('responsiveFrame');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const deviceButtons = document.querySelectorAll('.device-button');
 
     // Tema
     themeToggle.addEventListener('click', function() {
@@ -552,7 +558,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-  
     // URL çevirici
     function convertToRawUrl(url) {
         const match = url.match(/https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)/);
@@ -588,13 +593,21 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('previewTab').style.display = 'none';
         document.getElementById('sourceTab').style.display = 'none';
         document.getElementById('responsiveTab').style.display = 'none';
-        tabButtons.forEach(btn => btn.style.display = 'none');
+        
+        // Hata burada: tabButtons tanımlı olup olmadığını kontrol et
+        if (tabButtons) {
+            tabButtons.forEach(btn => btn.style.display = 'none');
+        }
     }
 
     function hideLoading() {
         loading.style.display = 'none';
         document.getElementById('previewTab').style.display = 'block';
-        tabButtons.forEach(btn => btn.style.display = 'inline-block');
+        
+        // Hata burada: tabButtons tanımlı olup olmadığını kontrol et
+        if (tabButtons) {
+            tabButtons.forEach(btn => btn.style.display = 'inline-block');
+        }
     }
 
     function loadCSS(data) {
@@ -646,74 +659,73 @@ document.addEventListener('DOMContentLoaded', function() {
         doc.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true, cancelable: true }));
     }
 
-  async function fetchAndDisplayHTML(url) {
-    try {
-        showLoading();
-        const rawUrl = convertToRawUrl(url);
-        const htmlContent = await fetchProxy(rawUrl);
-        const baseUrl = rawUrl.substring(0, rawUrl.lastIndexOf('/') + 1);
+    async function fetchAndDisplayHTML(url) {
+        try {
+            showLoading();
+            const rawUrl = convertToRawUrl(url);
+            const htmlContent = await fetchProxy(rawUrl);
+            const baseUrl = rawUrl.substring(0, rawUrl.lastIndexOf('/') + 1);
 
-        const modifiedHtml = htmlContent
-            .replace(/<head([^>]*)>/i, `<head$1><base href="${baseUrl}">`)
-            .replace(/<script(\s*src=["'][^"']*["'])?(\s*type=["'](text|application)\/javascript["'])?/gi, '<script type="text/htmlpreview"$1');
+            const modifiedHtml = htmlContent
+                .replace(/<head([^>]*)>/i, `<head$1><base href="${baseUrl}">`)
+                .replace(/<script(\s*src=["'][^"']*["'])?(\s*type=["'](text|application)\/javascript["'])?/gi, '<script type="text/htmlpreview"$1');
 
-        const iframeDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write(modifiedHtml);
-        iframeDoc.close();
+            const iframeDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(modifiedHtml);
+            iframeDoc.close();
 
-        previewFrame.setAttribute('data-raw-url', rawUrl);
-        sourceCode.textContent = htmlContent;
-        resultTitle.textContent = url.split('/').pop();
-        originalLink.href = url;
+            previewFrame.setAttribute('data-raw-url', rawUrl);
+            sourceCode.textContent = htmlContent;
+            resultTitle.textContent = url.split('/').pop();
+            originalLink.href = url;
 
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabContents.forEach(content => content.classList.remove('active'));
-        document.querySelector('[data-tab="preview"]').classList.add('active');
-        document.getElementById('previewTab').classList.add('active');
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            document.querySelector('[data-tab="preview"]').classList.add('active');
+            document.getElementById('previewTab').classList.add('active');
 
-        previewFrame.onload = async () => {
-            try {
-                replaceAssets(baseUrl);
+            previewFrame.onload = async () => {
+                try {
+                    replaceAssets(baseUrl);
 
-                // İframe içinde jQuery kontrolü ve yükleme (gerekirse diğer kütüphaneler için de benzer mantık uygulanabilir)
-                const needsJquery = await new Promise(resolve => {
-                    previewFrame.contentWindow.addEventListener('load', () => {
-                        resolve(!previewFrame.contentWindow.$);
+                    // İframe içinde jQuery kontrolü ve yükleme (gerekirse diğer kütüphaneler için de benzer mantık uygulanabilir)
+                    const needsJquery = await new Promise(resolve => {
+                        previewFrame.contentWindow.addEventListener('load', () => {
+                            resolve(!previewFrame.contentWindow.$);
+                        });
+                        // Eğer yükleme çok uzun sürerse timeout ekleyebilirsiniz.
+                        setTimeout(() => resolve(false), 5000);
                     });
-                    // Eğer yükleme çok uzun sürerse timeout ekleyebilirsiniz.
-                    setTimeout(() => resolve(false), 5000);
-                });
 
-                if (needsJquery) {
-                    const jqueryScript = document.createElement('script');
-                    jqueryScript.src = 'https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js';
-                    previewFrame.contentDocument.head.appendChild(jqueryScript);
+                    if (needsJquery) {
+                        const jqueryScript = document.createElement('script');
+                        jqueryScript.src = 'https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js';
+                        previewFrame.contentDocument.head.appendChild(jqueryScript);
 
-                    // jQuery yüklendikten sonra çalışması gereken kodlar için bir olay dinleyicisi ekleyebilirsiniz.
-                    jqueryScript.onload = () => {
-                        console.log("jQuery iframe'e yüklendi.");
-                        // İframe içindeki scriptlerin jQuery'yi kullanmaya başlaması için gerekirse bir gecikme eklenebilir.
-                    };
-                    jqueryScript.onerror = () => {
-                        console.error("jQuery yüklenirken bir hata oluştu.");
-                    };
-                } else {
-                    console.log("jQuery zaten iframe içinde tanımlı.");
+                        jqueryScript.onload = () => {
+                            console.log("jQuery iframe'e yüklendi.");
+                        };
+                        jqueryScript.onerror = () => {
+                            console.error("jQuery yüklenirken bir hata oluştu.");
+                        };
+                    } else {
+                        console.log("jQuery zaten iframe içinde tanımlı.");
+                    }
+
+                } catch (e) {
+                    console.warn("Asset işlenemedi:", e);
                 }
+                hideLoading();
+            };
 
-            } catch (e) {
-                console.warn("Asset işlenemedi:", e);
-            }
+        } catch (err) {
             hideLoading();
-        };
-
-    } catch (err) {
-        hideLoading();
-        showError(err.message);
+            showError(err.message);
+        }
     }
-}
 
+    // Olay dinleyicileri
     viewButton.addEventListener('click', () => {
         const url = githubUrlInput.value.trim();
         if (!url) return showError("Lütfen bir GitHub HTML dosya URL'si girin.");
@@ -765,59 +777,48 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // İkinci scriptten alınan sekmeler ve cihaz butonu işlemleri
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const tabName = this.dataset.tab;
+
+            // Buton stilleri
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // İçerik gösterimi
+            tabContents.forEach(content => {
+                const isActive = content.id === `${tabName}Tab`;
+                content.style.display = isActive ? 'block' : 'none';
+                content.classList.toggle('active', isActive);
+            });
+
+            // Responsive sekmesi kontrolü
+            if (tabName === 'responsive' && previewFrame) {
+                responsiveFrame.src = previewFrame.src;
+            }
+        });
+    });
+
+    // Cihaz boyutları (tek event listener)
+    deviceButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const sizes = { 
+                mobile: '375px', 
+                tablet: '768px', 
+                desktop: '1024px', 
+                wide: '1440px' 
+            };
+            if (responsiveFrame) {
+                responsiveFrame.style.width = sizes[this.id] || '1024px';
+            }
+        });
+    });
+
     // Başlangıç URL
     if (!githubUrlInput.value.trim()) {
         githubUrlInput.value = 'https://github.com/emreoztemiz-ai-ml/Running-contexts-without-needing-a-Mobile-App/blob/main/index.html';
     }
 });
 </script>
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-  // Element seçimleri
-  const tabButtons = document.querySelectorAll('.tab-button');
-  const tabContents = document.querySelectorAll('.tab-content');
-  const deviceButtons = document.querySelectorAll('.device-button');
-  const responsiveFrame = document.getElementById('responsiveFrame');
-  const previewFrame = document.getElementById('previewFrame');
-
-  // Sekmeler
-  tabButtons.forEach(button => {
-    button.addEventListener('click', function () {
-      const tabName = this.dataset.tab;
-
-      // Buton stilleri
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      this.classList.add('active');
-
-      // İçerik gösterimi
-      tabContents.forEach(content => {
-        const isActive = content.id === `${tabName}Tab`;
-        content.style.display = isActive ? 'block' : 'none';
-        content.classList.toggle('active', isActive);
-      });
-
-      // Responsive sekmesi kontrolü
-      if (tabName === 'responsive' && previewFrame) {
-        responsiveFrame.src = previewFrame.src;
-      }
-    });
-  });
-
-  // Cihaz boyutları (tek event listener)
-  deviceButtons.forEach(button => {
-    button.addEventListener('click', function () {
-      const sizes = { 
-        mobile: '375px', 
-        tablet: '768px', 
-        desktop: '1024px', 
-        wide: '1440px' 
-      };
-      if (responsiveFrame) {
-        responsiveFrame.style.width = sizes[this.id] || '1024px';
-      }
-    });
-  });
-});
-        </script>
-</body>
 </html>
