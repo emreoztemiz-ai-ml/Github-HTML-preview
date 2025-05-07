@@ -671,46 +671,73 @@ document.addEventListener('DOMContentLoaded', function() {
         doc.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true, cancelable: true }));
     }
 
-    async function fetchAndDisplayHTML(url) {
-        try {
-            showLoading();
-            const rawUrl = convertToRawUrl(url);
-            const htmlContent = await fetchProxy(rawUrl);
-            const baseUrl = rawUrl.substring(0, rawUrl.lastIndexOf('/') + 1);
+  async function fetchAndDisplayHTML(url) {
+    try {
+        showLoading();
+        const rawUrl = convertToRawUrl(url);
+        const htmlContent = await fetchProxy(rawUrl);
+        const baseUrl = rawUrl.substring(0, rawUrl.lastIndexOf('/') + 1);
 
-            const modifiedHtml = htmlContent
-                .replace(/<head([^>]*)>/i, `<head$1><base href="${baseUrl}">`)
-                .replace(/<script(\s*src=["'][^"']*["'])?(\s*type=["'](text|application)\/javascript["'])?/gi, '<script type="text/htmlpreview"$1');
+        const modifiedHtml = htmlContent
+            .replace(/<head([^>]*)>/i, `<head$1><base href="${baseUrl}">`)
+            .replace(/<script(\s*src=["'][^"']*["'])?(\s*type=["'](text|application)\/javascript["'])?/gi, '<script type="text/htmlpreview"$1');
 
-            const iframeDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
-            iframeDoc.open();
-            iframeDoc.write(modifiedHtml);
-            iframeDoc.close();
+        const iframeDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(modifiedHtml);
+        iframeDoc.close();
 
-            previewFrame.setAttribute('data-raw-url', rawUrl);
-            sourceCode.textContent = htmlContent;
-            resultTitle.textContent = url.split('/').pop();
-            originalLink.href = url;
+        previewFrame.setAttribute('data-raw-url', rawUrl);
+        sourceCode.textContent = htmlContent;
+        resultTitle.textContent = url.split('/').pop();
+        originalLink.href = url;
 
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            document.querySelector('[data-tab="preview"]').classList.add('active');
-            document.getElementById('previewTab').classList.add('active');
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        document.querySelector('[data-tab="preview"]').classList.add('active');
+        document.getElementById('previewTab').classList.add('active');
 
-            previewFrame.onload = () => {
-                try {
-                    replaceAssets(baseUrl);
-                } catch (e) {
-                    console.warn("Asset işlenemedi:", e);
+        previewFrame.onload = async () => {
+            try {
+                replaceAssets(baseUrl);
+
+                // İframe içinde jQuery kontrolü ve yükleme (gerekirse diğer kütüphaneler için de benzer mantık uygulanabilir)
+                const needsJquery = await new Promise(resolve => {
+                    previewFrame.contentWindow.addEventListener('load', () => {
+                        resolve(!previewFrame.contentWindow.$);
+                    });
+                    // Eğer yükleme çok uzun sürerse timeout ekleyebilirsiniz.
+                    setTimeout(() => resolve(false), 5000);
+                });
+
+                if (needsJquery) {
+                    const jqueryScript = document.createElement('script');
+                    jqueryScript.src = 'https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js';
+                    previewFrame.contentDocument.head.appendChild(jqueryScript);
+
+                    // jQuery yüklendikten sonra çalışması gereken kodlar için bir olay dinleyicisi ekleyebilirsiniz.
+                    jqueryScript.onload = () => {
+                        console.log("jQuery iframe'e yüklendi.");
+                        // İframe içindeki scriptlerin jQuery'yi kullanmaya başlaması için gerekirse bir gecikme eklenebilir.
+                    };
+                    jqueryScript.onerror = () => {
+                        console.error("jQuery yüklenirken bir hata oluştu.");
+                    };
+                } else {
+                    console.log("jQuery zaten iframe içinde tanımlı.");
                 }
-            };
 
+            } catch (e) {
+                console.warn("Asset işlenemedi:", e);
+            }
             hideLoading();
-        } catch (err) {
-            hideLoading();
-            showError(err.message);
-        }
+        };
+
+    } catch (err) {
+        hideLoading();
+        showError(err.message);
     }
+}
 
     viewButton.addEventListener('click', () => {
         const url = githubUrlInput.value.trim();
