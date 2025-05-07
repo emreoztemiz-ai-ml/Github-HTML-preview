@@ -408,6 +408,13 @@ body.dark-theme .iframe-container:fullscreen {
     width: 100vw;
     height: 100vh;
 }
+#responsiveTab > div {
+  background: var(--bg-color);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0 auto;
+  max-width: 95%;
+}
     </style>
 </head>
 <body>
@@ -476,7 +483,7 @@ body.dark-theme .iframe-container:fullscreen {
             
             <div class="tab-content active" id="previewTab">
                 <div class="iframe-container">
-                   <iframe id="previewFrame" sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-top-navigation"></iframe>
+                   <iframe id="previewFrame" sandbox="allow-scripts"></iframe>
                 </div>
             </div>
             
@@ -493,7 +500,11 @@ body.dark-theme .iframe-container:fullscreen {
                         <button id="wide" class="device-button">🖥️ Geniş (1440px)</button>
                     </div>
                     <div style="border: 1px solid var(--border-color); display: inline-block; transition: all 0.3s ease;">
-                        <iframe id="responsiveFrame" sandbox="allow-scripts" style="width: 1024px; height: 600px; border: none; transition: all 0.3s ease;"></iframe>
+                       <iframe 
+  id="responsiveFrame" 
+  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+  style="width: 1024px; height: 600px; border: none; transition: all 0.3s ease; background: var(--bg-color);"
+></iframe>
                     </div>
                 </div>
             </div>
@@ -781,43 +792,90 @@ document.addEventListener('DOMContentLoaded', function() {
   const previewFrame = document.getElementById('previewFrame');
 
   // Sekmeler
-  tabButtons.forEach(button => {
-    button.addEventListener('click', function () {
-      const tabName = this.dataset.tab;
+// SEKME KODUNU BU ŞEKİLDE DEĞİŞTİRİN
+tabButtons.forEach(button => {
+  button.addEventListener('click', function () {
+    const tabName = this.dataset.tab;
 
-      // Buton stilleri
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      this.classList.add('active');
-
-      // İçerik gösterimi
-      tabContents.forEach(content => {
-        const isActive = content.id === `${tabName}Tab`;
-        content.style.display = isActive ? 'block' : 'none';
-        content.classList.toggle('active', isActive);
-      });
-
-      // Responsive sekmesi kontrolü
-      if (tabName === 'responsive' && previewFrame) {
-        responsiveFrame.src = previewFrame.src;
-      }
+    // Buton ve içerik güncelleme
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+    
+    tabContents.forEach(content => {
+      const isActive = content.id === `${tabName}Tab`;
+      content.style.display = isActive ? 'block' : 'none';
+      content.classList.toggle('active', isActive);
     });
-  });
 
-  // Cihaz boyutları (tek event listener)
-  deviceButtons.forEach(button => {
-    button.addEventListener('click', function () {
-      const sizes = { 
-        mobile: '375px', 
-        tablet: '768px', 
-        desktop: '1024px', 
-        wide: '1440px' 
-      };
-      if (responsiveFrame) {
-        responsiveFrame.style.width = sizes[this.id] || '1024px';
+    // RESPONSIVE SEKME İÇİN KRİTİK DÜZELTME
+    if (tabName === 'responsive' && previewFrame) {
+      const rawUrl = previewFrame.getAttribute('data-raw-url');
+      if (rawUrl) {
+        // 1. Responsive frame'e raw URL'yi yükle
+        responsiveFrame.src = rawUrl;
+        
+        // 2. Asset'leri yeniden işle
+        responsiveFrame.onload = () => {
+          const baseUrl = rawUrl.split('/').slice(0, -1).join('/') + '/';
+          replaceAssets(baseUrl, responsiveFrame);
+          
+          // 3. Tema uyumluluğu
+          const isDark = document.body.classList.contains('dark-theme');
+          responsiveFrame.contentDocument.documentElement.classList.toggle('dark-theme', isDark);
+        };
       }
-    });
+    }
   });
 });
-        </script>
+
+// CİHAZ BUTONLARINI BU ŞEKİLDE GÜNCELLEYİN
+deviceButtons.forEach(button => {
+  button.addEventListener('click', function () {
+    const sizes = { 
+      mobile: { width: '375px', height: '667px' },
+      tablet: { width: '768px', height: '1024px' },
+      desktop: { width: '1024px', height: '768px' },
+      wide: { width: '1440px', height: '900px' }
+    };
+    
+    const device = sizes[this.id] || sizes.desktop;
+    if (responsiveFrame) {
+      responsiveFrame.style.width = device.width;
+      responsiveFrame.style.height = device.height;
+      
+      // Yükseklik animasyonu
+      responsiveFrame.parentElement.style.transition = 'all 0.3s ease';
+    }
+  });
+});
+
+// REPLACEASSETS FONKSİYONUNU GÜNCELLEYİN
+function replaceAssets(baseUrl, targetFrame = previewFrame) {
+  const isExternal = url => url.includes('raw.githubusercontent.com');
+  const doc = targetFrame.contentDocument;
+
+  // CSS'leri yeniden yükle
+  doc.querySelectorAll('link[rel=stylesheet]').forEach(link => {
+    if (isExternal(link.href)) {
+      fetchProxy(link.href).then(data => {
+        const style = doc.createElement('style');
+        style.innerHTML = data;
+        doc.head.appendChild(style);
+      });
+    }
+  });
+
+  // Scriptleri yeniden işle
+  doc.querySelectorAll('script[type="text/htmlpreview"]').forEach(script => {
+    if (script.src && isExternal(script.src)) {
+      fetchProxy(script.src).then(data => {
+        const newScript = doc.createElement('script');
+        newScript.innerHTML = data;
+        doc.body.appendChild(newScript);
+      });
+    }
+  });
+}
+</script>
 </body>
 </html>
