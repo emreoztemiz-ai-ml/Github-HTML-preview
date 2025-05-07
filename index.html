@@ -516,175 +516,208 @@ body.dark-theme .iframe-container:fullscreen {
             <p><strong>Not:</strong> Bu araç yalnızca public GitHub repolarındaki HTML dosyalarını görüntüleyebilir. Özel repolar için yetkilendirme gereklidir.</p>
         </div>
     </main>
-    <script>
+<script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Element seçiciler
     const githubUrlInput = document.getElementById('githubUrl');
     const viewButton = document.getElementById('viewButton');
     const clearButton = document.getElementById('clearButton');
     const resultContainer = document.getElementById('resultContainer');
     const previewFrame = document.getElementById('previewFrame');
+    const responsiveFrame = document.getElementById('responsiveFrame');
     const sourceCode = document.getElementById('sourceCode');
+    const resultTitle = document.getElementById('resultTitle');
+    const originalLink = document.getElementById('originalLink');
+    const copyUrlButton = document.getElementById('copyUrlButton');
+    const copyRawButton = document.getElementById('copyRawButton');
+    const refreshButton = document.getElementById('refreshButton');
     const errorMessage = document.getElementById('errorMessage');
     const loading = document.getElementById('loading');
+    const themeToggle = document.getElementById('themeToggle');
+    const exampleUrls = document.querySelectorAll('.example-url');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const deviceButtons = document.querySelectorAll('.device-button');
     const fullScreenButton = document.getElementById('fullScreenButton');
 
-    // Tema değiştirme
-    document.getElementById('themeToggle').addEventListener('click', function() {
+    // Tema
+    themeToggle.addEventListener('click', function() {
         document.body.classList.toggle('dark-theme');
         localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
     });
-
-    // Kayıtlı temayı yükle
     if (localStorage.getItem('theme') === 'dark') {
         document.body.classList.add('dark-theme');
     }
 
-    // Örnek URL'ler
-    document.querySelectorAll('.example-url').forEach(link => {
+    // Örnek URL tıklama
+    exampleUrls.forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             githubUrlInput.value = `https://github.com/${this.textContent}`;
         });
     });
 
-    // Sekme yönetimi
-    document.querySelectorAll('.tab-button').forEach(button => {
+    // Sekmeler
+    tabButtons.forEach(button => {
         button.addEventListener('click', function() {
-            const tabName = this.dataset.tab;
-            // Tüm sekmeleri pasif yap
-            document.querySelectorAll('.tab-button, .tab-content').forEach(el => 
-                el.classList.remove('active')
-            );
-            // Aktif sekme ve içeriği
+            const tabName = this.getAttribute('data-tab');
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
             this.classList.add('active');
             document.getElementById(`${tabName}Tab`).classList.add('active');
-            
-            // Responsive sekmesinde frame güncelleme
             if (tabName === 'responsive') {
-                document.getElementById('responsiveFrame').src = previewFrame.src;
+                responsiveFrame.src = previewFrame.src;
             }
         });
     });
 
-    // Cihaz boyut butonları
-    const devicePresets = {
-        'mobile': '375px',
-        'tablet': '768px',
-        'desktop': '1024px',
-        'wide': '1440px'
-    };
-    document.querySelectorAll('.device-button').forEach(button => {
-        button.addEventListener('click', () => {
-            const frame = document.getElementById('responsiveFrame');
-            frame.style.width = devicePresets[button.id];
+    // Cihaz düğmeleri
+    deviceButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const sizes = { mobile: '375px', tablet: '768px', desktop: '1024px', wide: '1440px' };
+            responsiveFrame.style.width = sizes[this.id] || '1024px';
         });
     });
 
-    // GitHub URL → Raw URL dönüştürücü
-    const convertToRawUrl = url => {
-        const urlPattern = /https:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+)/;
-        if (!urlPattern.test(url)) throw new Error("Geçersiz GitHub URL formatı");
-        return url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
-    };
+    // URL çevirici
+    function convertToRawUrl(url) {
+        const match = url.match(/https:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)/);
+        if (!match) throw new Error("Geçersiz GitHub URL formatı.");
+        const [, owner, repo, branch, path] = match;
+        return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+    }
 
-    // HTML içeriğini işle ve iframe'e yükle
-    const processHTMLContent = (html, baseUrl) => {
-        // Tüm bağlantıları mutlak URL'ye çevir
-        const absolutePathHTML = html
-            .replace(/ (href|src)="(?!https?:\/\/)([^"]*)"/g, ` $1="${baseUrl}$2"`)
-            .replace(/<head>/i, `<head><base href="${baseUrl}">`);
-        
-        return absolutePathHTML;
-    };
+    // CORS proxy destekli fetch
+    function fetchProxy(url, options, i = 0) {
+        const proxies = [
+            '',
+            'https://api.codetabs.com/v1/proxy/?quest='
+        ];
+        return fetch(proxies[i] + url, options).then(res => {
+            if (!res.ok) throw new Error(`Yüklenemedi: ${url} - ${res.status} ${res.statusText}`);
+            return res.text();
+        }).catch(err => {
+            if (i === proxies.length - 1) throw err;
+            return fetchProxy(url, options, i + 1);
+        });
+    }
 
-    // Ana işlev
-    const fetchAndDisplayHTML = async url => {
-        try {
-            showLoading();
-            
-            // 1. URL doğrulama
-            if (!isValidGithubUrl(url)) {
-                throw new Error("Geçersiz GitHub URL formatı");
-            }
-
-            // 2. Raw URL'ye çevirme
-            const rawUrl = convertToRawUrl(url);
-
-            // 3. Güvenilir CORS proxy
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rawUrl)}`;
-
-            // 4. Fetch işlemi
-            const response = await fetch(proxyUrl, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0' // GitHub için gerekli
-                }
-            });
-
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            // 5. Proxy'dan gelen veriyi işleme
-            const data = await response.json();
-            const html = data.contents;
-
-            // 6. Base URL'i oluşturma
-            const baseURL = new URL(rawUrl);
-            baseURL.pathname = baseURL.pathname.split('/').slice(0, -1).join('/') + '/';
-
-            // 7. HTML'i düzenleme
-            const processedHTML = html
-                .replace(/<head>/i, `<head><base href="${baseURL}">`)
-                .replace(/(href|src)="(?!https?:\/\/)([^"]*)"/g, `$1="${baseURL}$2"`);
-
-            // 8. IFrame'e yükleme
-            previewFrame.srcdoc = processedHTML;
-
-            
-            // 9. Kaynak kod gösterimi
-            sourceCode.textContent = html;
-            
-            // 10. UI güncellemeleri
-            document.getElementById('resultTitle').textContent = url.split('/').pop();
-            document.getElementById('originalLink').href = url;
-            resultContainer.style.display = 'block';
-
-        } catch (error) {
-            showError(`Hata: ${error.message}`);
-            console.error('Hata detayı:', error);
-        }
-    };
-
-    // Yardımcı fonksiyonlar
-      const isValidGithubUrl = url => {
-        return /^https?:\/\/github\.com\/[^/]+\/[^/]+\/blob\/.+/.test(url);
-    };
-
-    const convertToRawUrl = url => {
-        return url
-            .replace('github.com', 'raw.githubusercontent.com')
-            .replace('/blob/', '/');
-    };
-
-    const showLoading = () => {
-        loading.style.display = 'flex';
-        resultContainer.style.display = 'none';
-    };
-
-    const hideLoading = () => {
-        loading.style.display = 'none';
-        resultContainer.style.display = 'block';
-    };
-
-    const showError = message => {
+    function showError(message) {
         errorMessage.textContent = message;
         errorMessage.style.display = 'block';
         setTimeout(() => errorMessage.style.display = 'none', 5000);
-    };
+    }
 
-    // Olay dinleyicileri
+    function showLoading() {
+        resultContainer.style.display = 'block';
+        loading.style.display = 'flex';
+        document.getElementById('previewTab').style.display = 'none';
+        document.getElementById('sourceTab').style.display = 'none';
+        document.getElementById('responsiveTab').style.display = 'none';
+        tabButtons.forEach(btn => btn.style.display = 'none');
+    }
+
+    function hideLoading() {
+        loading.style.display = 'none';
+        document.getElementById('previewTab').style.display = 'block';
+        tabButtons.forEach(btn => btn.style.display = 'inline-block');
+    }
+
+    function loadCSS(data) {
+        if (data) {
+            const style = document.createElement('style');
+            style.innerHTML = data;
+            document.head.appendChild(style);
+        }
+    }
+
+    function loadJS(data) {
+        if (data) {
+            const script = document.createElement('script');
+            script.innerHTML = data;
+            document.body.appendChild(script);
+        }
+    }
+
+    function replaceAssets(baseUrl) {
+        const isExternal = url => url.includes('raw.githubusercontent.com') || url.includes('bitbucket.org');
+
+        const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+
+        doc.querySelectorAll('link[rel=stylesheet]').forEach(link => {
+            if (isExternal(link.href)) {
+                fetchProxy(link.href).then(data => {
+                    const style = doc.createElement('style');
+                    style.innerHTML = data;
+                    doc.head.appendChild(style);
+                });
+            }
+        });
+
+        doc.querySelectorAll('script[type="text/htmlpreview"]').forEach(script => {
+            if (script.src && isExternal(script.src)) {
+                fetchProxy(script.src).then(data => {
+                    const newScript = doc.createElement('script');
+                    newScript.innerHTML = data;
+                    doc.body.appendChild(newScript);
+                });
+            } else {
+                script.removeAttribute('type');
+                const inlineScript = doc.createElement('script');
+                inlineScript.innerHTML = script.innerHTML;
+                doc.body.appendChild(inlineScript);
+            }
+        });
+
+        doc.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true, cancelable: true }));
+    }
+
+    async function fetchAndDisplayHTML(url) {
+        try {
+            showLoading();
+            const rawUrl = convertToRawUrl(url);
+            const htmlContent = await fetchProxy(rawUrl);
+            const baseUrl = rawUrl.substring(0, rawUrl.lastIndexOf('/') + 1);
+
+            const modifiedHtml = htmlContent
+                .replace(/<head([^>]*)>/i, `<head$1><base href="${baseUrl}">`)
+                .replace(/<script(\s*src=["'][^"']*["'])?(\s*type=["'](text|application)\/javascript["'])?/gi, '<script type="text/htmlpreview"$1');
+
+            const iframeDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(modifiedHtml);
+            iframeDoc.close();
+
+            previewFrame.setAttribute('data-raw-url', rawUrl);
+            sourceCode.textContent = htmlContent;
+            resultTitle.textContent = url.split('/').pop();
+            originalLink.href = url;
+
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            document.querySelector('[data-tab="preview"]').classList.add('active');
+            document.getElementById('previewTab').classList.add('active');
+
+            previewFrame.onload = () => {
+                try {
+                    replaceAssets(baseUrl);
+                } catch (e) {
+                    console.warn("Asset işlenemedi:", e);
+                }
+            };
+
+            hideLoading();
+        } catch (err) {
+            hideLoading();
+            showError(err.message);
+        }
+    }
+
     viewButton.addEventListener('click', () => {
         const url = githubUrlInput.value.trim();
-        if (!url) return showError("Lütfen bir URL girin");
+        if (!url) return showError("Lütfen bir GitHub HTML dosya URL'si girin.");
+        if (!url.includes('github.com') || !url.includes('/blob/')) {
+            return showError("Geçersiz GitHub URL formatı.");
+        }
         fetchAndDisplayHTML(url);
     });
 
@@ -693,20 +726,47 @@ document.addEventListener('DOMContentLoaded', function() {
         resultContainer.style.display = 'none';
     });
 
-    document.getElementById('copyUrlButton').addEventListener('click', function() {
-        navigator.clipboard.writeText(githubUrlInput.value);
-        this.textContent = "Kopyalandı!";
-        setTimeout(() => this.textContent = "URL Kopyala", 2000);
+    copyUrlButton.addEventListener('click', function() {
+        navigator.clipboard.writeText(githubUrlInput.value).then(() => {
+            this.textContent = "Kopyalandı!";
+            setTimeout(() => this.textContent = "URL Kopyala", 2000);
+        });
     });
 
-    fullScreenButton.addEventListener('click', () => {
-        const iframeContainer = previewFrame.parentElement;
-        iframeContainer.requestFullscreen?.() || 
-        alert("Tam ekran desteklenmiyor");
+    copyRawButton.addEventListener('click', function() {
+        const rawUrl = previewFrame.getAttribute('data-raw-url');
+        if (!rawUrl) return showError("Önce bir dosya görüntüleyin.");
+        navigator.clipboard.writeText(rawUrl).then(() => {
+            this.textContent = "Kopyalandı!";
+            setTimeout(() => this.textContent = "Raw URL Kopyala", 2000);
+        });
     });
 
-    // Enter tuşu desteği
-    githubUrlInput.addEventListener('keypress', e => e.key === 'Enter' && viewButton.click());
+    refreshButton.addEventListener('click', () => {
+        const url = githubUrlInput.value.trim();
+        if (url) fetchAndDisplayHTML(url);
+    });
+
+    githubUrlInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') viewButton.click();
+    });
+
+    fullScreenButton.addEventListener('click', function() {
+        const iframeContainer = previewFrame.closest('.iframe-container');
+        if (!iframeContainer) return showError("Önizleme alanı bulunamadı.");
+        if (!document.fullscreenElement) {
+            iframeContainer.requestFullscreen().catch(() => {
+                showError("Tam ekran modu desteklenmiyor veya reddedildi.");
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    });
+
+    // Başlangıç URL
+    if (!githubUrlInput.value.trim()) {
+        githubUrlInput.value = 'https://github.com/emreoztemiz-ai-ml/Running-contexts-without-needing-a-Mobile-App/blob/main/index.html';
+    }
 });
 </script>
 </body>
