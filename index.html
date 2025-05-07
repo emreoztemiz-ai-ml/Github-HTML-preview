@@ -538,6 +538,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const tabContents = document.querySelectorAll('.tab-content');
     const deviceButtons = document.querySelectorAll('.device-button');
     const fullScreenButton = document.getElementById('fullScreenButton');
+        const responsiveFrame = document.getElementById('responsiveFrame');
+    const previewFrame = document.getElementById('previewFrame');
 
     // Tema
     themeToggle.addEventListener('click', function() {
@@ -558,18 +560,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Sekmeler
     tabButtons.forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
             const tabName = this.getAttribute('data-tab');
             tabButtons.forEach(btn => btn.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
             this.classList.add('active');
             document.getElementById(`${tabName}Tab`).classList.add('active');
+
             if (tabName === 'responsive') {
                 responsiveFrame.src = previewFrame.src;
             }
         });
     });
 
+    const deviceButtons = document.querySelectorAll('.device-button');
+    deviceButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const sizes = {
+                mobile: '375px',
+                tablet: '768px',
+                desktop: '1024px',
+                wide: '1440px'
+            };
+            responsiveFrame.style.width = sizes[this.id] || '1024px';
+        });
+    });
     // Cihaz düğmeleri
     deviceButtons.forEach(button => {
         button.addEventListener('click', function () {
